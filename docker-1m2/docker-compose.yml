@@ -1,0 +1,93 @@
+version: '2'
+
+services:
+    web:
+        build: docker/nginx
+        restart: always
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./1m2:/storage
+        links:
+           - phpfpm
+        networks:
+            - network-back
+
+    phpfpm:
+        build: docker/phpfpm
+        restart: always
+        volumes:
+            - ./1m2:/storage
+        env_file:
+            - .env
+        networks:
+            - network-back
+        extra_hosts:
+            - "dockerhost:172.19.0.1"
+        environment:
+            PHP_IDE_CONFIG: 'serverName=Docker'
+            XDEBUG_CONFIG: 'idekey=PHPSTORM'
+
+    elasticsearch:
+        build: docker/elasticsearch
+        restart: always
+        volumes:
+            - ./1m2:/storage
+        environment:
+            - cluster.name=laradock-cluster
+            - xpack.security.enabled=false
+            - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+        env_file:
+            - .env
+        ports:
+            - 9200:9200
+        networks:
+            - network-back
+   
+    percona:
+        image: percona
+        restart: always
+        volumes:
+            - ./docker/mysql/data/percona:/var/lib/mysql
+            - ./docker/mysql/dumps:/dumps
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=MAGE_TWO
+            - MYSQL_USER=mage
+            - MYSQL_PASSWORD=123
+        networks:
+            - network-back
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        restart: always
+        container_name: phpmyadmin_development1
+        environment:
+            PMA_ARBITRARY: 1
+        ports:
+            - 8887:80
+        volumes:
+            - /sessions
+        networks:
+            - network-back
+    redis:
+        image: redis
+        restart: always
+        ports:
+          - 6380:6380
+        networks:
+            - network-back
+
+    #mailhog:
+    #    image: mailhog/mailhog:latest
+    #    restart: always
+    #    ports:
+    #      - "1025:1025"
+    #      - "8025:8025"
+    #    networks:
+    #      - network-back
+
+networks:
+    network-back:
+        driver: bridge
